@@ -1,0 +1,191 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: cityfix_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin123
+      - MONGO_INITDB_DATABASE=cityfix
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - cityfix_network
+
+  auth_service:
+    build:
+      context: ./src/AuthService
+      dockerfile: Dockerfile
+    container_name: cityfix_auth
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - MONGODB_URL=mongodb://admin:admin123@mongodb:27017/cityfix?authSource=admin
+      - JWT_SECRET=your-secret-key-change-in-production
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION_HOURS=24
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix_network
+    volumes:
+      - ./src/AuthService:/app
+
+  admin_service:
+    build:
+      context: ./src/AdminService
+      dockerfile: Dockerfile
+    container_name: cityfix_admin
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - MONGODB_URL=mongodb://admin:admin123@mongodb:27017/cityfix?authSource=admin
+      - AUTH_SERVICE_URL=http://auth_service:8001
+    depends_on:
+      - mongodb
+      - auth_service
+    networks:
+      - cityfix_network
+    volumes:
+      - ./src/AdminService:/app
+
+  ticket_service:
+    build:
+      context: ./src/TicketService
+      dockerfile: Dockerfile
+    container_name: cityfix_ticket
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+      - MONGODB_URL=mongodb://admin:admin123@mongodb:27017/cityfix?authSource=admin
+      - AUTH_SERVICE_URL=http://auth_service:8001
+      - NOTIFICATION_SERVICE_URL=http://notification_service:8006
+    depends_on:
+      - mongodb
+      - auth_service
+    networks:
+      - cityfix_network
+    volumes:
+      - ./src/TicketService:/app
+
+  media_service:
+    build:
+      context: ./src/MediaService
+      dockerfile: Dockerfile
+    container_name: cityfix_media
+    restart: unless-stopped
+    ports:
+      - "8004:8004"
+    environment:
+      - PORT=8004
+      - MONGODB_URL=mongodb://admin:admin123@mongodb:27017/cityfix?authSource=admin
+      - UPLOAD_DIR=/app/uploads
+      - MAX_FILE_SIZE=10485760
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix_network
+    volumes:
+      - ./src/MediaService:/app
+      - media_uploads:/app/uploads
+
+  geo_service:
+    build:
+      context: ./src/GeoService
+      dockerfile: Dockerfile
+    container_name: cityfix_geo
+    restart: unless-stopped
+    ports:
+      - "8005:8005"
+    environment:
+      - PORT=8005
+      - MONGODB_URL=mongodb://admin:admin123@mongodb:27017/cityfix?authSource=admin
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix_network
+    volumes:
+      - ./src/GeoService:/app
+
+  notification_service:
+    build:
+      context: ./src/NotificationService
+      dockerfile: Dockerfile
+    container_name: cityfix_notification
+    restart: unless-stopped
+    ports:
+      - "8006:8006"
+    environment:
+      - PORT=8006
+      - MONGODB_URL=mongodb://admin:admin123@mongodb:27017/cityfix?authSource=admin
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix_network
+    volumes:
+      - ./src/NotificationService:/app
+
+  orchestrator:
+    build:
+      context: ./src/Orchestrator
+      dockerfile: Dockerfile
+    container_name: cityfix_orchestrator
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - AUTH_SERVICE_URL=http://auth_service:8001
+      - ADMIN_SERVICE_URL=http://admin_service:8002
+      - TICKET_SERVICE_URL=http://ticket_service:8003
+      - MEDIA_SERVICE_URL=http://media_service:8004
+      - GEO_SERVICE_URL=http://geo_service:8005
+      - NOTIFICATION_SERVICE_URL=http://notification_service:8006
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+    depends_on:
+      - auth_service
+      - admin_service
+      - ticket_service
+      - media_service
+      - geo_service
+      - notification_service
+    networks:
+      - cityfix_network
+    volumes:
+      - ./src/Orchestrator:/app
+
+  frontend:
+    build:
+      context: ./src/CityFixUI
+      dockerfile: Dockerfile
+    container_name: cityfix_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - orchestrator
+    networks:
+      - cityfix_network
+    volumes:
+      - ./src/CityFixUI:/app
+      - /app/node_modules
+
+networks:
+  cityfix_network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  media_uploads:
