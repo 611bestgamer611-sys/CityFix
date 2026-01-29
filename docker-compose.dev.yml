@@ -1,0 +1,195 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: cityfix-mongodb-dev
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: changeme123
+      MONGO_INITDB_DATABASE: cityfix
+    volumes:
+      - mongodb_data_dev:/data/db
+    networks:
+      - cityfix-network
+
+  orchestrator:
+    build:
+      context: ./src/Orchestrator
+      dockerfile: Dockerfile.dev
+    container_name: cityfix-orchestrator-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=changeme123
+      - MONGO_DB=cityfix
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - ADMIN_SERVICE_URL=http://admin-service:8002
+      - TICKET_SERVICE_URL=http://ticket-service:8003
+      - MEDIA_SERVICE_URL=http://media-service:8004
+      - GEO_SERVICE_URL=http://geo-service:8005
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8006
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+    volumes:
+      - ./src/Orchestrator:/app
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix-network
+
+  auth-service:
+    build:
+      context: ./src/AuthService
+      dockerfile: Dockerfile.dev
+    container_name: cityfix-auth-dev
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=changeme123
+      - MONGO_DB=cityfix
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - PORT=8001
+    volumes:
+      - ./src/AuthService:/app
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix-network
+
+  admin-service:
+    build:
+      context: ./src/AdminService
+      dockerfile: Dockerfile.dev
+    container_name: cityfix-admin-dev
+    ports:
+      - "8002:8002"
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=changeme123
+      - MONGO_DB=cityfix
+      - PORT=8002
+    volumes:
+      - ./src/AdminService:/app
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix-network
+
+  ticket-service:
+    build:
+      context: ./src/TicketService
+      dockerfile: Dockerfile.dev
+    container_name: cityfix-ticket-dev
+    ports:
+      - "8003:8003"
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=changeme123
+      - MONGO_DB=cityfix
+      - PORT=8003
+    volumes:
+      - ./src/TicketService:/app
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix-network
+
+  media-service:
+    build:
+      context: ./src/MediaService
+      dockerfile: Dockerfile.dev
+    container_name: cityfix-media-dev
+    ports:
+      - "8004:8004"
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=changeme123
+      - MONGO_DB=cityfix
+      - UPLOAD_DIR=/uploads
+      - PORT=8004
+    volumes:
+      - ./src/MediaService:/app
+      - media_uploads_dev:/uploads
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix-network
+
+  geo-service:
+    build:
+      context: ./src/GeoService
+      dockerfile: Dockerfile.dev
+    container_name: cityfix-geo-dev
+    ports:
+      - "8005:8005"
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=changeme123
+      - MONGO_DB=cityfix
+      - PORT=8005
+    volumes:
+      - ./src/GeoService:/app
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix-network
+
+  notification-service:
+    build:
+      context: ./src/NotificationService
+      dockerfile: Dockerfile.dev
+    container_name: cityfix-notification-dev
+    ports:
+      - "8006:8006"
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=changeme123
+      - MONGO_DB=cityfix
+      - PORT=8006
+    volumes:
+      - ./src/NotificationService:/app
+    depends_on:
+      - mongodb
+    networks:
+      - cityfix-network
+
+  frontend:
+    build:
+      context: ./src/CityFixUI
+      dockerfile: Dockerfile.dev
+    container_name: cityfix-frontend-dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./src/CityFixUI:/app
+      - /app/node_modules
+    networks:
+      - cityfix-network
+
+networks:
+  cityfix-network:
+    driver: bridge
+
+volumes:
+  mongodb_data_dev:
+  media_uploads_dev:

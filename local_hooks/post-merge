@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# CityFix Post-Merge Hook
+# Runs after a successful git merge
+
+set -e
+
+echo "🔄 Post-merge actions..."
+
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Check if package-lock.json changed
+if git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD | grep -q "src/CityFixUI/package-lock.json"; then
+    echo -e "${YELLOW}📦 package-lock.json changed, updating dependencies...${NC}"
+    cd src/CityFixUI
+    if command -v npm &> /dev/null; then
+        npm install
+        echo -e "${GREEN}✅ Frontend dependencies updated${NC}"
+    fi
+    cd ../..
+fi
+
+# Check if requirements.txt changed in any service
+SERVICES=("AuthService" "AdminService" "TicketService" "MediaService" "GeoService" "NotificationService" "Orchestrator")
+
+for service in "${SERVICES[@]}"; do
+    if git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD | grep -q "src/$service/requirements.txt"; then
+        echo -e "${YELLOW}🐍 requirements.txt changed in $service, updating dependencies...${NC}"
+        cd "src/$service"
+        if command -v pip3 &> /dev/null; then
+            pip3 install -r requirements.txt --quiet
+            echo -e "${GREEN}✅ $service dependencies updated${NC}"
+        fi
+        cd ../..
+    fi
+done
+
+# Check if docker-compose.yml changed
+if git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD | grep -q "docker-compose.yml"; then
+    echo -e "${YELLOW}🐳 docker-compose.yml changed${NC}"
+    echo "You may want to rebuild Docker containers:"
+    echo "  docker-compose down"
+    echo "  docker-compose build"
+    echo "  docker-compose up -d"
+fi
+
+echo -e "${GREEN}✅ Post-merge actions completed${NC}"
+exit 0

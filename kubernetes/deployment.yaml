@@ -1,0 +1,379 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orchestrator
+  namespace: cityfix
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orchestrator
+  template:
+    metadata:
+      labels:
+        app: orchestrator
+    spec:
+      containers:
+      - name: orchestrator
+        image: cityfix/orchestrator:latest
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: cityfix-config
+        - secretRef:
+            name: cityfix-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: cityfix
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+      - name: auth-service
+        image: cityfix/auth-service:latest
+        ports:
+        - containerPort: 8001
+        env:
+        - name: PORT
+          value: "8001"
+        envFrom:
+        - configMapRef:
+            name: cityfix-config
+        - secretRef:
+            name: cityfix-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-service
+  namespace: cityfix
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: admin-service
+  template:
+    metadata:
+      labels:
+        app: admin-service
+    spec:
+      containers:
+      - name: admin-service
+        image: cityfix/admin-service:latest
+        ports:
+        - containerPort: 8002
+        env:
+        - name: PORT
+          value: "8002"
+        envFrom:
+        - configMapRef:
+            name: cityfix-config
+        - secretRef:
+            name: cityfix-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticket-service
+  namespace: cityfix
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ticket-service
+  template:
+    metadata:
+      labels:
+        app: ticket-service
+    spec:
+      containers:
+      - name: ticket-service
+        image: cityfix/ticket-service:latest
+        ports:
+        - containerPort: 8003
+        env:
+        - name: PORT
+          value: "8003"
+        envFrom:
+        - configMapRef:
+            name: cityfix-config
+        - secretRef:
+            name: cityfix-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-service
+  namespace: cityfix
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: media-service
+  template:
+    metadata:
+      labels:
+        app: media-service
+    spec:
+      containers:
+      - name: media-service
+        image: cityfix/media-service:latest
+        ports:
+        - containerPort: 8004
+        env:
+        - name: PORT
+          value: "8004"
+        envFrom:
+        - configMapRef:
+            name: cityfix-config
+        - secretRef:
+            name: cityfix-secrets
+        volumeMounts:
+        - name: media-storage
+          mountPath: /uploads
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8004
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8004
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: media-storage
+        persistentVolumeClaim:
+          claimName: media-uploads-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: geo-service
+  namespace: cityfix
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: geo-service
+  template:
+    metadata:
+      labels:
+        app: geo-service
+    spec:
+      containers:
+      - name: geo-service
+        image: cityfix/geo-service:latest
+        ports:
+        - containerPort: 8005
+        env:
+        - name: PORT
+          value: "8005"
+        envFrom:
+        - configMapRef:
+            name: cityfix-config
+        - secretRef:
+            name: cityfix-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8005
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8005
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: cityfix
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: cityfix/notification-service:latest
+        ports:
+        - containerPort: 8006
+        env:
+        - name: PORT
+          value: "8006"
+        envFrom:
+        - configMapRef:
+            name: cityfix-config
+        - secretRef:
+            name: cityfix-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8006
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8006
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: cityfix
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: cityfix/frontend:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5

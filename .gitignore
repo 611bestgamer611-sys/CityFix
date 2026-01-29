@@ -134,3 +134,32 @@ mongo-data/
 # Logs
 logs/
 *.log
+
+# CI/CD
+*.war
+*.nar
+
+# Test coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Kubernetes secrets (never commit real secrets)
+*-secret.yaml
+secrets/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# OS
+Thumbs.db
+.Spotlight-V100
+.Trashes
