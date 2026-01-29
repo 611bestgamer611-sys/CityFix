@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cityfix
+  labels:
+    name: cityfix
+    environment: production
+    app: cityfix-platform

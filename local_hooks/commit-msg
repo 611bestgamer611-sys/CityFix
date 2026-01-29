@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# CityFix Commit Message Hook
+# Validates commit messages follow conventional commits format
+
+set -e
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo "📝 Validating commit message..."
+
+# Ignore merge commits
+if echo "$COMMIT_MSG" | grep -q "^Merge"; then
+    echo -e "${GREEN}✅ Merge commit detected, skipping validation${NC}"
+    exit 0
+fi
+
+# Conventional Commits format: type(scope): subject
+# type: feat, fix, docs, style, refactor, test, chore, perf, ci, build
+# scope: optional
+# subject: brief description
+
+PATTERN="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build)(\([a-z0-9_-]+\))?: .{1,100}"
+
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+    echo -e "${RED}❌ Invalid commit message format${NC}"
+    echo ""
+    echo "Commit message must follow Conventional Commits format:"
+    echo ""
+    echo "  <type>[optional scope]: <description>"
+    echo ""
+    echo "Examples:"
+    echo "  feat: add user authentication"
+    echo "  fix(auth): resolve token expiration issue"
+    echo "  docs: update API documentation"
+    echo "  refactor(ticket): simplify ticket creation logic"
+    echo ""
+    echo "Valid types:"
+    echo "  feat     - A new feature"
+    echo "  fix      - A bug fix"
+    echo "  docs     - Documentation changes"
+    echo "  style    - Code style changes (formatting, etc.)"
+    echo "  refactor - Code refactoring"
+    echo "  test     - Adding or updating tests"
+    echo "  chore    - Maintenance tasks"
+    echo "  perf     - Performance improvements"
+    echo "  ci       - CI/CD changes"
+    echo "  build    - Build system changes"
+    echo ""
+    echo "Your commit message:"
+    echo "$COMMIT_MSG"
+    echo ""
+    exit 1
+fi
+
+# Check for minimum length
+SUBJECT=$(echo "$COMMIT_MSG" | head -n1)
+SUBJECT_LENGTH=${#SUBJECT}
+
+if [ $SUBJECT_LENGTH -lt 10 ]; then
+    echo -e "${RED}❌ Commit message subject too short (minimum 10 characters)${NC}"
+    echo "Your message: $SUBJECT ($SUBJECT_LENGTH characters)"
+    exit 1
+fi
+
+# Check for maximum length
+if [ $SUBJECT_LENGTH -gt 100 ]; then
+    echo -e "${RED}❌ Commit message subject too long (maximum 100 characters)${NC}"
+    echo "Your message: $SUBJECT ($SUBJECT_LENGTH characters)"
+    exit 1
+fi
+
+# Check that subject doesn't end with a period
+if echo "$SUBJECT" | grep -q "\.$"; then
+    echo -e "${YELLOW}⚠️  Warning: Commit subject should not end with a period${NC}"
+fi
+
+# Check for WIP commits on protected branches
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
+    if echo "$COMMIT_MSG" | grep -iq "wip\|work in progress"; then
+        echo -e "${RED}❌ WIP commits are not allowed on $BRANCH${NC}"
+        exit 1
+    fi
+fi
+
+echo -e "${GREEN}✅ Commit message validated${NC}"
+exit 0

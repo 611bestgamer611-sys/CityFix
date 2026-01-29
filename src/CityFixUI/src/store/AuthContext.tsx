@@ -6,9 +6,13 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role?: string) => Promise<void>;
+  register: (email: string, password: string, role?: string, tenantId?: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  userRole: string | undefined;
+  tenantId: string | undefined;
+  notificationCount: number;
+  refreshNotifications: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,6 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -37,6 +42,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuth();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      refreshNotifications();
+      const interval = setInterval(refreshNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const refreshNotifications = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await api.get(`/notifications/user/${user.id}`);
+      const unread = response.data.filter((n: any) => !n.read).length;
+      setNotificationCount(unread);
+    } catch (error) {
+      console.error('Failed to refresh notifications:', error);
+    }
+  };
+
   const login = async (email: string, password: string) => {
     const response = await api.post('/auth/login', { email, password });
     const { access_token, user: userData } = response.data;
@@ -46,9 +70,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(userData);
   };
 
-  const register = async (email: string, password: string, role: string = 'citizen') => {
-    const response = await api.post('/auth/register', { email, password, role });
-    const userData = response.data;
+  const register = async (email: string, password: string, role: string = 'citizen', tenantId?: string) => {
+    const payload: any = { email, password, role };
+    if (tenantId) {
+      payload.tenant_id = tenantId;
+    }
+    await api.post('/auth/register', payload);
     
     await login(email, password);
   };
@@ -57,6 +84,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    setNotificationCount(0);
   };
 
   return (
@@ -67,7 +95,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login, 
         register, 
         logout, 
-        isAuthenticated: !!user 
+        isAuthenticated: !!user,
+        userRole: user?.role,
+        tenantId: user?.tenant_id,
+        notificationCount,
+        refreshNotifications,
       }}
     >
       {children}

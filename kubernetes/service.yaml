@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: orchestrator
+  namespace: cityfix
+spec:
+  selector:
+    app: orchestrator
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: cityfix
+spec:
+  selector:
+    app: auth-service
+  type: ClusterIP
+  ports:
+  - port: 8001
+    targetPort: 8001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-service
+  namespace: cityfix
+spec:
+  selector:
+    app: admin-service
+  type: ClusterIP
+  ports:
+  - port: 8002
+    targetPort: 8002
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticket-service
+  namespace: cityfix
+spec:
+  selector:
+    app: ticket-service
+  type: ClusterIP
+  ports:
+  - port: 8003
+    targetPort: 8003
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: media-service
+  namespace: cityfix
+spec:
+  selector:
+    app: media-service
+  type: ClusterIP
+  ports:
+  - port: 8004
+    targetPort: 8004
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: geo-service
+  namespace: cityfix
+spec:
+  selector:
+    app: geo-service
+  type: ClusterIP
+  ports:
+  - port: 8005
+    targetPort: 8005
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: cityfix
+spec:
+  selector:
+    app: notification-service
+  type: ClusterIP
+  ports:
+  - port: 8006
+    targetPort: 8006
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: cityfix
+spec:
+  selector:
+    app: frontend
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orchestrator-external
+  namespace: cityfix
+spec:
+  selector:
+    app: orchestrator
+  type: NodePort
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30000

@@ -1,0 +1,115 @@
+#!/bin/bash
+
+# CityFix Update Hook
+# Server-side hook that validates branch operations
+
+set -e
+
+# Arguments
+REFNAME=$1
+OLDREV=$2
+NEWREV=$3
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Get branch name
+BRANCH=$(echo "$REFNAME" | sed 's/refs\/heads\///')
+
+echo "🔍 Validating update for branch: $BRANCH"
+
+# Protected branches
+PROTECTED_BRANCHES=("main" "master" "production")
+
+# Check if branch is protected
+is_protected() {
+    for protected in "${PROTECTED_BRANCHES[@]}"; do
+        if [ "$BRANCH" = "$protected" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Deletion check
+if [ "$NEWREV" = "0000000000000000000000000000000000000000" ]; then
+    if is_protected; then
+        echo -e "${RED}❌ Cannot delete protected branch: $BRANCH${NC}"
+        exit 1
+    fi
+    echo -e "${YELLOW}⚠️  Branch deletion detected: $BRANCH${NC}"
+    exit 0
+fi
+
+# Creation check
+if [ "$OLDREV" = "0000000000000000000000000000000000000000" ]; then
+    echo -e "${GREEN}✅ New branch created: $BRANCH${NC}"
+    
+    # Validate branch naming
+    if ! echo "$BRANCH" | grep -qE "^(main|master|develop|feature/|bugfix/|hotfix/|release/)"; then
+        echo -e "${YELLOW}⚠️  Warning: Branch name doesn't follow convention${NC}"
+        echo "Recommended patterns:"
+        echo "  - feature/description"
+        echo "  - bugfix/description"
+        echo "  - hotfix/description"
+        echo "  - release/version"
+    fi
+    
+    exit 0
+fi
+
+# Update check (fast-forward only for protected branches)
+if is_protected; then
+    echo "Protected branch detected, checking for fast-forward..."
+    
+    # Check if update is a fast-forward
+    if ! git merge-base --is-ancestor "$OLDREV" "$NEWREV"; then
+        echo -e "${RED}❌ Non-fast-forward updates are not allowed for $BRANCH${NC}"
+        echo "Please rebase your changes or create a pull request"
+        exit 1
+    fi
+    
+    # Check if force push
+    if ! git rev-list "$OLDREV".."$NEWREV" | grep -q "$OLDREV"; then
+        echo -e "${RED}❌ Force push detected to protected branch${NC}"
+        exit 1
+    fi
+fi
+
+# Branch name validation
+case "$BRANCH" in
+    feature/*)
+        # Feature branches are ok
+        ;;
+    bugfix/*)
+        # Bugfix branches are ok
+        ;;
+    hotfix/*)
+        # Hotfix branches are ok
+        ;;
+    release/*)
+        # Release branches are ok
+        ;;
+    develop|main|master|production)
+        # Protected branches already checked
+        ;;
+    *)
+        echo -e "${YELLOW}⚠️  Warning: Unconventional branch name: $BRANCH${NC}"
+        ;;
+esac
+
+# Check for large diffs (potential accidents)
+DIFF_SIZE=$(git diff --stat "$OLDREV" "$NEWREV" | tail -1 | awk '{print $4}')
+if [ -n "$DIFF_SIZE" ]; then
+    CHANGES=$(echo "$DIFF_SIZE" | sed 's/[^0-9]//g')
+    if [ -n "$CHANGES" ] && [ "$CHANGES" -gt 10000 ]; then
+        echo -e "${YELLOW}⚠️  Warning: Large changeset detected (${CHANGES} changes)${NC}"
+        echo "Please review before pushing"
+    fi
+fi
+
+echo -e "${GREEN}✅ Update validation passed${NC}"
+exit 0

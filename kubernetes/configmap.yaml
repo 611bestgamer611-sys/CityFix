@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cityfix-config
+  namespace: cityfix
+data:
+  # MongoDB Configuration
+  MONGO_HOST: mongodb
+  MONGO_PORT: "27017"
+  MONGO_DB: cityfix
+  
+  # Service URLs
+  AUTH_SERVICE_URL: http://auth-service:8001
+  ADMIN_SERVICE_URL: http://admin-service:8002
+  TICKET_SERVICE_URL: http://ticket-service:8003
+  MEDIA_SERVICE_URL: http://media-service:8004
+  GEO_SERVICE_URL: http://geo-service:8005
+  NOTIFICATION_SERVICE_URL: http://notification-service:8006
+  
+  # Application Configuration
+  CORS_ORIGINS: "*"
+  LOG_LEVEL: INFO
+  
+  # Media Configuration
+  UPLOAD_DIR: /uploads
+  MAX_FILE_SIZE: "10485760"
